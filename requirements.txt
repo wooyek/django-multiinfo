@@ -1,0 +1,5 @@
+# Redirect requirements to a locked/compiles/frozen file
+-r requirements/lock/production.txt
+
+# Allow installation of requirements from local folder
+--find-links=requirements/local
