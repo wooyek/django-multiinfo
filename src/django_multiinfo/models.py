@@ -36,13 +36,6 @@ class SmsMessage(models.Model):
     def __str__(self):
         return u"{}:{}:{}".format(self.__class__.__name__, self.to, self.body)
 
-    @classmethod
-    def queue(cls, email_messages):
-        for item in email_messages:
-            instance = cls._create(item)
-            logging.debug("Queue message: %s", instance)
-            yield instance
-
     def send(self):
         data = {
             "dest": self.to,

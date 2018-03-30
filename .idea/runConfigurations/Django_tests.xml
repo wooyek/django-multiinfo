@@ -13,6 +13,10 @@
     <option name="ADD_SOURCE_ROOTS" value="false" />
     <module name="django-multiinfo" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <ENTRIES />
+    </EXTENSION>
     <option name="TARGET" value="src" />
     <option name="SETTINGS_FILE" value="$PROJECT_DIR$/tests/settings.py" />
     <option name="CUSTOM_SETTINGS" value="false" />
