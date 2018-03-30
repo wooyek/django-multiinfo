@@ -20,8 +20,9 @@ class UserFactory(factory.DjangoModelFactory):
         model = get_user_model()
 
 
-class SampleModelFactory(factory.DjangoModelFactory):
-    name = factory.Faker('name')
+class SmsMessageFactory(factory.DjangoModelFactory):
+    to = factory.Faker('msisdn')
+    body = factory.Faker('text', max_nb_chars=1377)
 
     class Meta:
-        model = models.SampleModel
+        model = models.SmsMessage

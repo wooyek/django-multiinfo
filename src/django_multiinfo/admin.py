@@ -1,14 +1,24 @@
-# coding=utf-8
 from django.contrib import admin
-from import_export.admin import ImportExportMixin
+from django.utils.translation import ugettext_lazy as _
 
-from . import models, resources
+from . import models
 
 
-@admin.register(models.SampleModel)
-class SampleModelAdmin(ImportExportMixin, admin.ModelAdmin):
-    resource_class = resources.SampleModelResource
-    list_display = ('foo', )
-    list_filter = ('foo', )
-    readonly_fields = ('foo', )
-    # date_hierarchy = 'ts'
+@admin.register(models.SmsMessage)
+class SmsMessageAdmin(admin.ModelAdmin):
+    list_display = (
+        'created',
+        'posted',
+        'to',
+        'body',
+    )
+    list_filter = ('status',)
+    date_hierarchy = 'created'
+    actions = ['bulk_send']
+    search_fields = ('to', 'body',)
+
+    # noinspection PyUnusedLocal
+    def bulk_send(self, request, queryset):
+        models.SmsMessage.bulk_send(queryset)
+
+    bulk_send.short_description = _("bulk send")

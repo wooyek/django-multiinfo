@@ -7,10 +7,10 @@ click
 django<2.0 ; python_version < '3.5'
 django>=2.0 ; python_version >= '3.5'
 django-environ
-django-formtools
+# django-formtools
 django-import-export
-django-localflavor
-django-pascal-templates
+# django-localflavor
+# django-pascal-templates
 # django-polymodels
 django-powerbank
 # django-reversion
@@ -21,9 +21,12 @@ enum34 ; python_version < '3.4'
 # jinja2-highlight
 # markdown
 # maya
-psycopg2
-pycountry
-pytz
+multiinfo
+# psycopg2-binary
+# pycountry
+# pytz
 pathlib ; python_version < '3.3'
-# raven
 requests
+
+--find-links=requirements/local
+

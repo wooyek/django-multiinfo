@@ -1,12 +1,69 @@
-# -*- coding: utf-8 -*-
+import logging
+from enum import IntEnum
+
+import six
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
+log = logging.getLogger(__name__)
 
-class SampleModel(models.Model):
-    foo = models.CharField(max_length=150, verbose_name=_('foo'))
 
-    class Meta:
-        default_related_name = "samples"
-        verbose_name = _('sample model')
-        verbose_name_plural = _('sample models')
+class ChoicesIntEnum(IntEnum):
+    """Extends IntEum with django choices generation capability"""
+
+    @classmethod
+    def choices(cls):
+        return [(item.value, _(item.name.replace("_", " ").capitalize())) for item in cls]
+
+    @classmethod
+    def values(cls):
+        return [item.value for item in cls]
+
+
+class SmsStatus(ChoicesIntEnum):
+    created = 0
+    posted = 1
+
+
+@six.python_2_unicode_compatible
+class SmsMessage(models.Model):
+    status = models.PositiveSmallIntegerField(choices=SmsStatus.choices(), default=SmsStatus.created)
+    created = models.DateTimeField(auto_now_add=True)
+    posted = models.DateTimeField(blank=True, null=True)
+    to = models.CharField(max_length=15, blank=True, null=True)
+    body = models.TextField()
+
+    def __str__(self):
+        return u"{}:{}:{}".format(self.__class__.__name__, self.to, self.body)
+
+    @classmethod
+    def queue(cls, email_messages):
+        for item in email_messages:
+            instance = cls._create(item)
+            logging.debug("Queue message: %s", instance)
+            yield instance
+
+    def send(self):
+        data = {
+            "dest": self.to,
+            "text": self.body,
+        }
+        from multiinfo.core import multiinfo_api
+        multiinfo_api.send_long_sms.send(**data)
+
+    @classmethod
+    def send_queued(cls, limit=None):
+        qry = cls.objects.filter(status=SmsStatus.created).order_by("created")
+        if limit:
+            qry = qry[:limit]
+        cls.bulk_send(qry)
+        return qry.first() is not None
+
+    @classmethod
+    def bulk_send(cls, qry):
+        for message in qry:
+            try:
+                message.send()
+            except Exception as ex:
+                # Log error but do not block other messages
+                logging.error("SMS send failed", exc_info=ex)

@@ -1,6 +1,8 @@
 # coding=utf-8
 
-from django.conf import settings
+#: Don't queue messages store them and send them immediately
+#: Set this to True if you are going to use
+SMS_QUEUE_EAGER = False
 
-# This is an example
-DJANGO_MULTIINFO_SECRET = settings.SECRET_KEY[::4]
+#: Worker sleep time between queue checkup
+SMS_QUEUE_SLEEP_TIME = 15
