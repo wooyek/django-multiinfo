@@ -2,6 +2,7 @@ import logging
 from enum import IntEnum
 
 import six
+from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
@@ -36,13 +37,20 @@ class SmsMessage(models.Model):
     def __str__(self):
         return u"{}:{}:{}".format(self.__class__.__name__, self.to, self.body)
 
+    @classmethod
+    def queue(cls, **kwargs):
+        item = cls.objects.create(**kwargs)
+        if settings.SMS_QUEUE_EAGER:
+            item.send()
+        return item
+
     def send(self):
         data = {
             "dest": self.to,
             "text": self.body,
         }
-        from multiinfo.core import multiinfo_api
-        multiinfo_api.send_long_sms.send(**data)
+        from multiinfo import core
+        core.multiinfo_api.send_long_sms.send(**data)
 
     @classmethod
     def send_queued(cls, limit=None):

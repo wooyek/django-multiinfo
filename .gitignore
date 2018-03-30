@@ -94,3 +94,4 @@ fabric.properties
 .cache
 secrets.yml
 secrets.env
+.pytest_cache

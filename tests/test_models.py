@@ -3,7 +3,7 @@
 import six
 from django.contrib import admin
 from django.core.management import execute_from_command_line
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from mock import patch, mock
 
@@ -42,6 +42,19 @@ class SmsMessageModel(TestCase):
     def test_str(self):
         o = SmsMessage(body="ążśźćńółĄŻŚŹĘĆŃÓŁ", to="b")
         self.assertEqual(u"SmsMessage:b:ążśźćńółĄŻŚŹĘĆŃÓŁ", six.text_type(o))
+
+    @patch('django_multiinfo.models.SmsMessage.send')
+    def test_queue(self, send):
+        item = models.SmsMessage.queue(to=1, body='foo')
+        self.assertEqual(models.SmsStatus.created, item.status)
+        assert not send.called
+
+    @override_settings(SMS_QUEUE_EAGER=True)
+    @patch('django_multiinfo.models.SmsMessage.send')
+    def test_queue_eager(self, send):
+        item = models.SmsMessage.queue(to=1, body='foo')
+        self.assertEqual(models.SmsStatus.created, item.status)
+        assert send.called
 
 
 class SmsStatusTests(TestCase):
