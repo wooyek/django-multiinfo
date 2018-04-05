@@ -8,7 +8,8 @@ from . import models
 class SmsMessageAdmin(admin.ModelAdmin):
     list_display = (
         'created',
-        'posted',
+        'ts',
+        'status',
         'to',
         'body',
     )

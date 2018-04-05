@@ -1,9 +1,11 @@
 import logging
+from datetime import datetime
 from enum import IntEnum
 
 import six
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 log = logging.getLogger(__name__)
@@ -24,13 +26,14 @@ class ChoicesIntEnum(IntEnum):
 class SmsStatus(ChoicesIntEnum):
     created = 0
     posted = 1
+    busy = 2
 
 
 @six.python_2_unicode_compatible
 class SmsMessage(models.Model):
     status = models.PositiveSmallIntegerField(choices=SmsStatus.choices(), default=SmsStatus.created)
     created = models.DateTimeField(auto_now_add=True)
-    posted = models.DateTimeField(blank=True, null=True)
+    ts = models.DateTimeField(blank=True, null=True)
     to = models.CharField(max_length=15, blank=True, null=True)
     body = models.TextField()
 
@@ -49,8 +52,14 @@ class SmsMessage(models.Model):
             "dest": self.to,
             "text": self.body,
         }
+        now = datetime.utcnow().replace(tzinfo=timezone.get_default_timezone())
+        self.ts = now
+        self.status = SmsStatus.busy
+        self.save()
         from multiinfo import core
         core.multiinfo_api.send_long_sms.send(**data)
+        self.status = SmsStatus.posted
+        self.save()
 
     @classmethod
     def send_queued(cls, limit=None):

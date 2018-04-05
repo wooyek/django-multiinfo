@@ -18,4 +18,4 @@
 # Documentation
 -r ../docs/requirements.txt
 
-
+--find-links=requirements/local
