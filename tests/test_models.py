@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.core.management import execute_from_command_line
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from mock import patch, mock
+from mock import mock, patch
 
 from django_multiinfo import models
 from django_multiinfo.admin import SmsMessageAdmin
