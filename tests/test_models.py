@@ -59,7 +59,7 @@ class SmsMessageModel(TestCase):
 
 class SmsStatusTests(TestCase):
     def test_values(self):
-        self.assertEqual([0, 1], SmsStatus.values())
+        self.assertEqual([0, 1, 2], SmsStatus.values())
 
 
 class CommandTests(TestCase):
