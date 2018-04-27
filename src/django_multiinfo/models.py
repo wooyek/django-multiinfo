@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from datetime import datetime
 from enum import IntEnum
 
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from multiinfo import core
+from multiinfo.endpoints import STATUS_MAPPING
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +30,8 @@ class SmsStatus(ChoicesIntEnum):
     created = 0
     posted = 1
     busy = 2
+    error = 3
+    discarded = 4
 
 
 @six.python_2_unicode_compatible
@@ -36,6 +41,7 @@ class SmsMessage(models.Model):
     ts = models.DateTimeField(blank=True, null=True)
     to = models.CharField(max_length=15, blank=True, null=True)
     body = models.TextField()
+    eid = models.BigIntegerField(null=True, blank=True)
 
     def __str__(self):
         return u"{}:{}:{}".format(self.__class__.__name__, self.to, self.body)
@@ -56,8 +62,8 @@ class SmsMessage(models.Model):
         self.ts = now
         self.status = SmsStatus.busy
         self.save()
-        from multiinfo import core
-        core.multiinfo_api.send_long_sms.send(**data)
+        sms = core.multiinfo_api.send_long_sms.send(**data)
+        self.eid = sms.message_id
         self.status = SmsStatus.posted
         self.save()
 
@@ -77,3 +83,41 @@ class SmsMessage(models.Model):
             except Exception as ex:
                 # Log error but do not block other messages
                 logging.error("SMS send failed", exc_info=ex)
+
+    def get_message_info(self):
+        assert self.eid, "Cannot get info for message {}, no eid to use with multiinfo.".format(self.pk)
+        data = core.multiinfo_api.info_sms.get(self.eid)
+        SmsMessageInfo.create_from_data(data, self)
+
+
+STATUS_CHOICES = OrderedDict(sorted(STATUS_MAPPING.items(), key=lambda x: x[0])).items()
+
+
+@six.python_2_unicode_compatible
+class SmsMessageInfo(models.Model):
+    sms_message = models.ForeignKey(SmsMessage, null=True, blank=True, on_delete=models.CASCADE)
+    send_error = models.TextField(null=True, blank=True)
+    ts = models.DateTimeField(auto_now=True)
+
+    dest = models.CharField(max_length=15)
+    body_type = models.PositiveSmallIntegerField()
+    encoding = models.PositiveSmallIntegerField()
+    connector_id = models.BigIntegerField()
+    sms_id = models.BigIntegerField()
+    last_change_date = models.DateTimeField()
+    message_status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES)
+    priority = models.PositiveSmallIntegerField()
+    protocol = models.PositiveSmallIntegerField()
+    report_delivery = models.BooleanField()
+    request_status = models.IntegerField()
+    service_id = models.IntegerField()
+    response_to_id = models.BigIntegerField()
+    send_date = models.DateTimeField()
+    valid_to = models.DateTimeField()
+    sender_name = models.CharField(max_length=150)
+    text = models.TextField()
+
+    @classmethod
+    def create_from_data(cls, data, sms_message=None):
+        data['message_status'] = data.pop('message_status')[0]
+        return SmsMessageInfo.objects.create(sms_message=sms_message, **data)

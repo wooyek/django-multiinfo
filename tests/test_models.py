@@ -2,18 +2,20 @@
 # -*- coding: utf-8 -*-
 import six
 from django.contrib import admin
+from django.contrib.messages.storage.base import BaseStorage
 from django.core.management import execute_from_command_line
-from django.test import TestCase, override_settings
+from django.test import TestCase, override_settings, RequestFactory
 from django.utils import timezone
 from mock import mock, patch
+from multiinfo.endpoints import parse_status_info
 
-from django_multiinfo import models
+from django_multiinfo import models, factories
 from django_multiinfo.admin import SmsMessageAdmin
 from django_multiinfo.factories import SmsMessageFactory
 from django_multiinfo.models import SmsMessage, SmsStatus
 
 
-class SmsMessageModel(TestCase):
+class SmsMessageModelTests(TestCase):
 
     @patch('multiinfo.core.ApiClient.request')
     def test_send(self, request):
@@ -59,7 +61,7 @@ class SmsMessageModel(TestCase):
 
 class SmsStatusTests(TestCase):
     def test_values(self):
-        self.assertEqual([0, 1, 2], SmsStatus.values())
+        self.assertEqual([0, 1, 2, 3, 4], SmsStatus.values())
 
 
 class CommandTests(TestCase):
@@ -98,7 +100,49 @@ class TestAdmin(TestCase):
         from django.core.management import BaseCommand
         BaseCommand().check(display_num_errors=True)
 
+    @patch("django_multiinfo.models.SmsMessage.get_message_info")
+    def test_get_message_info(self, get_message_info):
+        factories.SmsMessageFactory(eid=1)
+        qry = SmsMessage.objects.all()
+        SmsMessageAdmin(SmsMessage, None).get_message_info(None, qry)
+        self.assertTrue(get_message_info.called)
+
+    @patch("django_multiinfo.models.SmsMessage.get_message_info")
+    def test_get_not_message_info(self, get_message_info):
+        factories.SmsMessageFactory(eid=None)
+        qry = SmsMessage.objects.all()
+        request = RequestFactory()
+        request._messages = BaseStorage(request)
+        SmsMessageAdmin(SmsMessage, None).get_message_info(request, qry)
+        self.assertFalse(get_message_info.called)
+
 
 class TestWorker(TestCase):
     def test_worker(self):
         pass
+
+
+TEST_INFO_2 = """0
+2322590614
+1
+foobar
+0
+0
+3290
+662000123
+-1
+0
+270418092727
+300418092728
+False
+CONTOSO
+48121662123
+7
+2018-02-27 08:17:28"""
+
+
+# noinspection PyMethodMayBeStatic
+class SmsMessageInfoTests(TestCase):
+    def test_create(self):
+        data = parse_status_info(TEST_INFO_2)
+        models.SmsMessageInfo.create_from_data(data)

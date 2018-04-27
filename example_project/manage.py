@@ -10,7 +10,7 @@ logging.disable(logging.NOTSET)
 logging.getLogger('environ').setLevel(logging.INFO)
 
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "website.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "website.settings.development")
 
     from django.core.management import execute_from_command_line
 

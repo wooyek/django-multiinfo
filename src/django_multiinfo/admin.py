@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.translation import ugettext_lazy as _
 
 from . import models
@@ -12,14 +12,25 @@ class SmsMessageAdmin(admin.ModelAdmin):
         'status',
         'to',
         'body',
+        'eid',
     )
     list_filter = ('status',)
     date_hierarchy = 'created'
-    actions = ['bulk_send']
-    search_fields = ('to', 'body',)
+    actions = ['bulk_send', 'get_message_info']
+    search_fields = ('to', 'body', 'eid')
 
     # noinspection PyUnusedLocal
     def bulk_send(self, request, queryset):
         models.SmsMessage.bulk_send(queryset)
 
-    bulk_send.short_description = _("bulk send")
+    bulk_send.short_description = _("Bulk send")
+
+    # noinspection PyUnusedLocal
+    def get_message_info(self, request, queryset):
+        if queryset.filter(eid__isnull=True).exists():
+            messages.error(request, "Cannot get info if eid is not set. Did those messages have bee send?")
+            return
+        for item in queryset:
+            item.get_message_info()
+
+    get_message_info.short_description = _("Get status information")
