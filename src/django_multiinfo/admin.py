@@ -34,3 +34,18 @@ class SmsMessageAdmin(admin.ModelAdmin):
             item.get_message_info()
 
     get_message_info.short_description = _("Get status information")
+
+
+@admin.register(models.SmsMessageInfo)
+class SmsMessageInfoAdmin(admin.ModelAdmin):
+    list_display = (
+        'ts',
+        'message_status',
+        'last_change_date',
+        'dest',
+        'text',
+    )
+    list_filter = ('message_status',)
+    date_hierarchy = 'ts'
+    search_fields = ('dest', 'text', 'sms_id')
+
