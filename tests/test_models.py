@@ -148,6 +148,7 @@ class SmsMessageModelTests(TestCase):
         info = item.get_message_info()
         self.assertIsNotNone(info)
 
+
 class SmsStatusTests(TestCase):
     def test_values(self):
         self.assertEqual([0, 1, 2, 3, 4], SmsStatus.values())
