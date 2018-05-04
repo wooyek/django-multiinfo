@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import six
 from datetime import datetime, timedelta
 
+import six
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.messages.storage.base import BaseStorage
 from django.core.management import execute_from_command_line
-from django.test import TestCase, override_settings, RequestFactory
+from django.test import RequestFactory, TestCase, override_settings
 from django.utils import timezone
 from mock import mock, patch
 from multiinfo.endpoints import parse_status_info
 
-from django_multiinfo import models, factories
+from django_multiinfo import factories, models
 from django_multiinfo.admin import SmsMessageAdmin
 from django_multiinfo.factories import SmsMessageFactory
 from django_multiinfo.models import SmsMessage, SmsStatus

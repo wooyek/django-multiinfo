@@ -19,6 +19,7 @@ import logging
 import os
 import shutil
 import sys
+from collections import OrderedDict
 from itertools import chain
 from pathlib import Path
 
@@ -51,6 +52,11 @@ def get_current_version():
 
 
 @task
+def version(ctx):
+    print("Version: " + get_current_version())
+
+
+@task
 def clean(ctx):
     """Remote temporary files"""
     for item in chain(Path(ROOT_DIR).rglob("*.pyc"), Path(ROOT_DIR).rglob("*.pyo")):
@@ -80,16 +86,24 @@ def check(ctx):
     ctx.run("isort --check-only --diff --recursive src tests setup.py")
     ctx.run("python setup.py check --strict --metadata --restructuredtext")
     ctx.run("check-manifest  --ignore .idea,.idea/* .")
-    ctx.run("pytest")
+    ctx.run("pytest --cov=src --cov=tests --cov-fail-under=100")
+
+
+@task
+def isort(ctx):
+    """Check project codebase cleanness"""
+    ctx.run("isort --recursive src tests setup.py")
 
 
 @task
 def detox(ctx):
     """Run detox with a subset of envs and report run separately"""
     envs = ctx.run("tox -l").stdout.splitlines()
+    envs.remove('clean')
     envs.remove('report')
     envs = [e for e in envs if not e.startswith('py2')]
     log.info("Detox a subset of environments: %s", envs)
+    ctx.run("tox -e clean")
     ctx.run("detox --skip-missing-interpreters -e " + ",".join(envs))
     ctx.run("tox -e report")
 
@@ -144,6 +158,18 @@ def sync(ctx):
     ctx.run("git checkout develop")
 
 
+@task(sync)
+def sync_master(ctx):
+    ctx.run("git checkout master")
+    ctx.run("git merge develop --verbose")
+
+    ctx.run("git checkout develop")
+    ctx.run("git merge master --verbose")
+
+    ctx.run("git push origin develop --verbose")
+    ctx.run("git push origin master --verbose")
+    ctx.run("git push --tags")
+
 @task
 def bump(ctx):
     """Increment version number"""
@@ -155,8 +181,8 @@ def pip_compile(ctx):
     """Upgrade frozen requirements to the latest version"""
     ctx.run('pip-compile requirements/production.txt -o requirements/lock/production.txt --verbose --upgrade')
     ctx.run('sort requirements/lock/production.txt -o requirements/lock/production.txt')
-    ctx.run('git add requirements.txt')
-    ctx.run('git commit -m "Requirements compiled by pip-compile"')
+    ctx.run('git add requirements/lock/*.txt')
+    ctx.run('git commit -m "Requirements compiled by pip-compile" --allow-empty')
 
 
 @task()
@@ -205,15 +231,9 @@ def release_finish(ctx):
 
 
 # noinspection PyUnusedLocal
-@task(check, sync, detox, bump)
+@task(isort, check, pip_compile, sync, detox, bump, sync_master)
 def release(ctx):
     """Build new package version release and sync repo"""
-    ctx.run("git checkout develop")
-    ctx.run("git merge master --verbose")
-
-    ctx.run("git push origin develop --verbose")
-    ctx.run("git push origin master --verbose")
-    ctx.run("git push --tags")
 
 
 # noinspection PyUnusedLocal
@@ -280,8 +300,10 @@ def deploy(ctx, remote='dev', branch='master'):
     """
     ctx.run("git checkout {branch}".format(branch=branch))
     ctx.run("git push {remote} {branch}  --verbose".format(remote=remote, branch=branch))
-    ctx.run("heroku logs -r {remote}".format(remote=remote))  # We need this to show release script output
     ctx.run("git checkout develop")
+    # ctx.run("heroku logs -r {remote}".format(remote=remote))  # We need this to show release script output
+    # ctx.run("ssh user@example.com docker ps")
+    print("[ OK ] Deployed: " + get_current_version())
 
 
 # noinspection PyUnusedLocal
@@ -307,12 +329,12 @@ def vagrant(ctx):
     ctx.run("git push vagrant develop --verbose")
 
 
-FIXTURES = {
-    "auth": (
+FIXTURES = OrderedDict((
+    ("auth", (
         "auth.Group",
         "auth.User",
-    ),
-}
+    )),
+))
 
 
 @task
@@ -353,5 +375,5 @@ def db(ctx):
     """
     Full database re-initialization
     """
-    cmd = "python manage.py fill_test_data "
+    cmd = "python manage.py fill_test_data --on-empty"
     ctx.run(cmd)
