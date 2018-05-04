@@ -7,5 +7,8 @@ SMS_QUEUE_EAGER = False
 #: Worker sleep time between queue checkup
 SMS_QUEUE_SLEEP_TIME = 15
 
-#: Discard messages after failing delivery for
-SMS_QUEUE_DISCARD_HOURS = 24
+#: Discard messages after failing delivery for X hours
+SMS_QUEUE_DISCARD_HOURS = None
+
+#: Retry stalled messages (status==busy) after X seconds
+SMS_QUEUE_RETRY_SECONDS = 300

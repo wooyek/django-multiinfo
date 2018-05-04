@@ -1,11 +1,12 @@
 import logging
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import IntEnum
 
 import six
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from multiinfo import core
@@ -38,7 +39,7 @@ class SmsStatus(ChoicesIntEnum):
 class SmsMessage(models.Model):
     status = models.PositiveSmallIntegerField(choices=SmsStatus.choices(), default=SmsStatus.created)
     created = models.DateTimeField(auto_now_add=True)
-    ts = models.DateTimeField(blank=True, null=True)
+    ts = models.DateTimeField(blank=True, null=True, auto_now=True)
     to = models.CharField(max_length=15, blank=True, null=True)
     body = models.TextField()
     eid = models.BigIntegerField(null=True, blank=True)
@@ -53,7 +54,7 @@ class SmsMessage(models.Model):
             item.send()
         return item
 
-    def send(self):
+    def _send(self):
         data = {
             "dest": self.to,
             "text": self.body,
@@ -69,20 +70,31 @@ class SmsMessage(models.Model):
 
     @classmethod
     def send_queued(cls, limit=None):
-        qry = cls.objects.filter(status=SmsStatus.created).order_by("created")
+        seconds = settings.SMS_QUEUE_RETRY_SECONDS
+        retry = timezone.now() - timedelta(seconds=seconds)
+        qry = cls.objects.filter(Q(status=SmsStatus.created) | Q(status=SmsStatus.busy, ts__lte=retry)).order_by("created")
         if limit:
             qry = qry[:limit]
         cls.bulk_send(qry)
         return qry.first() is not None
 
+    def send(self, fail_silently=True):
+        try:
+            self._send()
+        except Exception as ex:
+            if fail_silently is False:
+                raise ex
+            # Log error but do not block other messages
+            logging.error("SMS send failed", exc_info=ex)
+            age_hours = (timezone.now() - self.created).seconds / 3600
+            if settings.SMS_QUEUE_DISCARD_HOURS and age_hours > settings.SMS_QUEUE_DISCARD_HOURS:
+                self.status = SmsStatus.discarded
+                self.save()
+
     @classmethod
     def bulk_send(cls, qry):
         for message in qry:
-            try:
-                message.send()
-            except Exception as ex:
-                # Log error but do not block other messages
-                logging.error("SMS send failed", exc_info=ex)
+            message.send()
 
     def get_message_info(self):
         assert self.eid, "Cannot get info for message {}, no eid to use with multiinfo.".format(self.pk)

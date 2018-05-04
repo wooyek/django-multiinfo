@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import six
+from datetime import datetime, timedelta
+
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.messages.storage.base import BaseStorage
 from django.core.management import execute_from_command_line
@@ -57,6 +60,68 @@ class SmsMessageModelTests(TestCase):
         item = models.SmsMessage.queue(to=1, body='foo')
         self.assertEqual(models.SmsStatus.created, item.status)
         assert send.called
+
+    @override_settings(SMS_QUEUE_DISCARD_HOURS=2)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_discard_message(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage(created=timezone.now() - timedelta(hours=2, seconds=1))
+        item.send()
+        self.assertEqual(item.status, models.SmsStatus.discarded)
+
+    @override_settings(SMS_QUEUE_DISCARD_HOURS=1)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_dont_discard_message(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage(created=timezone.now() - timedelta(seconds=3599))
+        item.send()
+        self.assertEqual(models.SmsStatus.created, item.status)
+
+    @override_settings(SMS_QUEUE_DISCARD_HOURS=None)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_dont_discard_message2(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage(created=timezone.now() - timedelta(seconds=3599))
+        item.send()
+        self.assertEqual(models.SmsStatus.created, item.status)
+
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_fail_silently(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage(created=timezone.now())
+        item.send()
+
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_dont_fail_silently(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage()
+        self.assertRaises(Exception, item.send, fail_silently=False)
+
+    @override_settings(SMS_QUEUE_RETRY_SECONDS=600)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_retry_busy(self, send):
+        seconds = settings.SMS_QUEUE_RETRY_SECONDS + 2
+        retry = datetime.now() - timedelta(seconds=seconds)
+        message = factories.SmsMessageFactory(
+            ts=retry,
+            status=SmsStatus.busy,
+        )
+        models.SmsMessage.objects.all().update(ts=retry)
+        message.send_queued()
+        self.assertTrue(send.called)
+
+    @override_settings(SMS_QUEUE_RETRY_SECONDS=600)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_retry_wait(self, send):
+        seconds = settings.SMS_QUEUE_RETRY_SECONDS - 2
+        retry = datetime.now() - timedelta(seconds=seconds)
+        message = factories.SmsMessageFactory(
+            ts=retry,
+            status=SmsStatus.busy,
+        )
+        models.SmsMessage.objects.all().update(ts=retry)
+        message.send_queued()
+        self.assertFalse(send.called)
 
 
 class SmsStatusTests(TestCase):

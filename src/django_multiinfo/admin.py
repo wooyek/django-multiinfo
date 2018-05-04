@@ -48,4 +48,3 @@ class SmsMessageInfoAdmin(admin.ModelAdmin):
     list_filter = ('message_status',)
     date_hierarchy = 'ts'
     search_fields = ('dest', 'text', 'sms_id')
-
