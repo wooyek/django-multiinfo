@@ -99,7 +99,7 @@ class SmsMessage(models.Model):
     def get_message_info(self):
         assert self.eid, "Cannot get info for message {}, no eid to use with multiinfo.".format(self.pk)
         data = core.multiinfo_api.info_sms.get(self.eid)
-        SmsMessageInfo.create_from_data(data, self)
+        return SmsMessageInfo.create_from_data(data, self)
 
 
 STATUS_CHOICES = OrderedDict(sorted(STATUS_MAPPING.items(), key=lambda x: x[0])).items()

@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         sent_qs = SmsMessage.objects.filter(status=SmsStatus.posted).order_by('created')
-        if not sent_qs.exists():
+        if not sent_qs.exists():  # pragma: no cover
             logging.debug('No messages to delete')
             return
 

@@ -123,6 +123,30 @@ class SmsMessageModelTests(TestCase):
         message.send_queued()
         self.assertFalse(send.called)
 
+    @patch('multiinfo.core.multiinfo_api.info_sms.get')
+    def test_get_message_info(self, get):
+        get.return_value = {
+            'request_status': '0',
+            'protocol': 0,
+            'report_delivery': False,
+            'text': 'foobar%0a',
+            'body_type': 1,
+            'encoding': 0,
+            'send_date': datetime(2018, 4, 27, 7, 49, 6),
+            'connector_id': 662000123,
+            'priority': 0,
+            'valid_to': datetime(2018, 4, 30, 7, 49, 6),
+            'sms_id': '2322549673',
+            'last_change_date': datetime(2018, 2, 27, 7, 58, 6),
+            'response_to_id': -1,
+            'message_status': (21, 'Wiadomość przesłana pomyślnie'),
+            'sender_name': 'FABRIKAM',
+            'service_id': 3290,
+            'dest': '48197927123'
+        }
+        item = factories.SmsMessageFactory(eid=123)
+        info = item.get_message_info()
+        self.assertIsNotNone(info)
 
 class SmsStatusTests(TestCase):
     def test_values(self):
