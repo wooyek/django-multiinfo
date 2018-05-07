@@ -79,6 +79,11 @@ class SmsMessage(models.Model):
         return qry.first() is not None
 
     def send(self, fail_silently=True):
+        if self.created:
+            age_hours = (timezone.now() - self.created).seconds / 3600
+            if settings.SMS_QUEUE_DISCARD_HOURS and age_hours > settings.SMS_QUEUE_DISCARD_HOURS:
+                self.status = SmsStatus.discarded
+                self.save()
         try:
             self._send()
         except Exception as ex:
@@ -86,10 +91,6 @@ class SmsMessage(models.Model):
                 raise ex
             # Log error but do not block other messages
             logging.error("SMS send failed", exc_info=ex)
-            age_hours = (timezone.now() - self.created).seconds / 3600
-            if settings.SMS_QUEUE_DISCARD_HOURS and age_hours > settings.SMS_QUEUE_DISCARD_HOURS:
-                self.status = SmsStatus.discarded
-                self.save()
 
     @classmethod
     def bulk_send(cls, qry):

@@ -18,6 +18,7 @@ class SmsMessageAdmin(admin.ModelAdmin):
     date_hierarchy = 'created'
     actions = ['bulk_send', 'get_message_info']
     search_fields = ('to', 'body', 'eid')
+    readonly_fields = ('created', 'ts')
 
     # noinspection PyUnusedLocal
     def bulk_send(self, request, queryset):
