@@ -68,6 +68,7 @@ class SmsMessageModelTests(TestCase):
         item = models.SmsMessage(created=timezone.now() - timedelta(hours=2, seconds=1))
         item.send()
         self.assertEqual(item.status, models.SmsStatus.discarded)
+        self.assertFalse(send.called)
 
     @override_settings(SMS_QUEUE_DISCARD_HOURS=2)
     @patch('django_multiinfo.models.SmsMessage._send')

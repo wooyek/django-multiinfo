@@ -86,6 +86,7 @@ class SmsMessage(models.Model):
             if settings.SMS_QUEUE_DISCARD_HOURS and age_hours > settings.SMS_QUEUE_DISCARD_HOURS:
                 self.status = SmsStatus.discarded
                 self.save()
+                return
         try:
             self._send()
         except Exception as ex:
