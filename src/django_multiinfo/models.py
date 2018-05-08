@@ -3,12 +3,14 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from enum import IntEnum
 
+import maya
 import six
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from maya import MayaDT
 from multiinfo import core
 from multiinfo.endpoints import STATUS_MAPPING
 
@@ -80,7 +82,7 @@ class SmsMessage(models.Model):
 
     def send(self, fail_silently=True):
         if self.created:
-            age_hours = (timezone.now() - self.created).seconds / 3600
+            age_hours = (timezone.now() - self.created).total_seconds() / 3600
             if settings.SMS_QUEUE_DISCARD_HOURS and age_hours > settings.SMS_QUEUE_DISCARD_HOURS:
                 self.status = SmsStatus.discarded
                 self.save()

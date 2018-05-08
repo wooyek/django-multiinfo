@@ -69,6 +69,14 @@ class SmsMessageModelTests(TestCase):
         item.send()
         self.assertEqual(item.status, models.SmsStatus.discarded)
 
+    @override_settings(SMS_QUEUE_DISCARD_HOURS=2)
+    @patch('django_multiinfo.models.SmsMessage._send')
+    def test_discard_message2(self, send):
+        send.side_effect = Exception("Foo")
+        item = models.SmsMessage(created=timezone.now() - timedelta(days=30, hours=1, seconds=1))
+        item.send()
+        self.assertEqual(item.status, models.SmsStatus.discarded)
+
     @override_settings(SMS_QUEUE_DISCARD_HOURS=1)
     @patch('django_multiinfo.models.SmsMessage._send')
     def test_dont_discard_message(self, send):
