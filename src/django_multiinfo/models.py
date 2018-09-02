@@ -45,6 +45,10 @@ class SmsMessage(models.Model):
     to = models.CharField(max_length=15, blank=True, null=True)
     body = models.TextField()
     eid = models.BigIntegerField(null=True, blank=True)
+    key = models.CharField(max_length=150, null=True, blank=True)
+
+    class Meta:
+        index_together = ('to', 'key')
 
     def __str__(self):
         return u"{}:{}:{}".format(self.__class__.__name__, self.to, self.body)
