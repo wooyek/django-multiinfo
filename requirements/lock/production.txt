@@ -6,7 +6,7 @@ chardet==3.0.4            # via requests
 click==6.7
 click-log==0.3.2          # via multiinfo
 diff-match-patch==20121119  # via django-import-export
-django==2.1.1 ; python_version >= "3.5"
+django==2.2.24 ; python_version >= "3.5"
 django-environ==0.4.5
 django-import-export==1.0.1
 django-localflavor==2.1   # via django-powerbank
